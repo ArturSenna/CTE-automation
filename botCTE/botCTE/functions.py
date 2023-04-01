@@ -141,11 +141,7 @@ class RequestDataFrame:
             )
         }
 
-        # payload = {
-        #     'csv_file': files
-        # }
-        response = requests.post(url=link, headers=self.auth,
-                                 files=payload)
+        response = requests.post(url=link, headers=self.auth, files=payload)
 
         return response.text
 

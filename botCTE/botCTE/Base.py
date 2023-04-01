@@ -209,10 +209,10 @@ def cte_list():
     cte_path = folderpath.get()
     cte_path = cte_path.replace('/', '\\')
 
-    report.to_excel(
-        f'{cte_path}\\Lista CTE-{now_date}-{now}.xlsx',
-        index=False
-    )
+    excel_file = f'{cte_path}\\Lista CTE-{now_date}-{now}.xlsx'
+    csv_file = f'{cte_path}\\Upload-{now_date}-{now}.csv'
+
+    report.to_excel(excel_file, index=False)
 
     print("Relatório exportado!")
 
@@ -228,9 +228,6 @@ def cte_list():
     current_row = 0
 
     for protocol in sv['protocol']:
-
-        excel_file = f'{cte_path}\\Lista CTE-{now_date}-{now}.xlsx'
-        csv_file = f'{cte_path}\\Upload-{now_date}-{now}.csv'
 
         tomador_cnpj = sv.loc[sv['protocol'] == protocol, 'customerIDService.cnpj_cpf'].values.item()
         source_add = sv.loc[sv['protocol'] == protocol, 'serviceIDRequested.source_address_id'].values.item()
@@ -289,9 +286,10 @@ def cte_list():
         csv_report.to_csv(
             csv_file,
             index=False,
+            encoding='utf-8'
         )
 
-        post_private('https://transportebiologico.com.br/api/uploads/cte-loglife', csv_file)
+        r.post_file('https://transportebiologico.com.br/api/uploads/cte-loglife', csv_file)
 
         current_row += 1
 
@@ -423,8 +421,9 @@ def cte_complimentary(unique=False):
                 (sv['step'] != 'toCollectService') &
                 (sv['step'] != 'collectingService') &
                 (sv['step'] != 'toBoardService') &
-                (sv['step'] != 'boardingService')]
-    # # Client list FILTER START
+                (sv['step'] != 'boardingService') &
+                (sv['step'] != 'toBoardValidate')]
+    # # Client list FILTER START.
     # sv = sv.loc[
     #     (sv['customerIDService.trading_firstname'] == "CERBA-LCA") |
     #     (sv['customerIDService.trading_firstname'] == "PROVET") |
@@ -434,7 +433,7 @@ def cte_complimentary(unique=False):
     #     (sv['customerIDService.trading_firstname'] == "LABORATÓRIO KTZ") |
     #     (sv['customerIDService.trading_firstname'] == "NORDD PATOLOGIA")
     # ]
-    # # Client list FILTER END
+    # # Client list FILTER END.
     sv.to_excel('ServicesAPI.xlsx', index=True)
     sv['origCityList'] = sv['serviceIDRequested.source_address_id'].map(get_address_city_listed)
     sv['destCityList'] = sv['serviceIDRequested.destination_address_id'].map(get_address_city_listed)
@@ -603,10 +602,10 @@ def cte_complimentary(unique=False):
     report_date = dt.datetime.strftime(dt.datetime.now(), '%d/%m/%Y')
     csv_report['Data Emissão CTE'] = report_date
 
-    report.to_excel(
-        f'{cte_comp_path}\\CTE complementar-{now_date}-{now}.xlsx',
-        index=False
-    )
+    excel_file = f'{cte_comp_path}\\CTE complementar-{now_date}-{now}.xlsx'
+    csv_file = f'{cte_comp_path}\\Upload complementar-{now_date}-{now}.csv'
+
+    report.to_excel(excel_file, index=False)
 
     print("Relatório exportado!")
 
@@ -631,34 +630,20 @@ def cte_complimentary(unique=False):
         aliq = aliquota_base.loc[aliquota_base['UF'] == uf_rem, uf_dest].values.item()
         cte = sv.loc[sv['protocol'] == protocol, 'cte_loglife'].values.item()
         obs_text = f'Protocolo {protocol} - {icms_obs}'
+
         if uf_rem != "MG":
             aliq_text = float(aliq)*float(valor)*0.008
             aliq_text = "{:0.2f}".format(aliq_text)
-            icms_obs = icms_obs.replace('#', aliq_text)
+            obs_text = obs_text.replace('#', aliq_text)
             aliq = "0"
-
-        # if tomador_cnpj in cnpj_remetente:
-        #     tomador = "Remetente"
-        #     cnpj_remetente = [tomador_cnpj]
-        # elif tomador_cnpj in cnpj_destinatario:
-        #     tomador = "Destinatário"
-        #     cnpj_destinatario = [tomador_cnpj]
-        # else:
-        #     tomador = "Outro"
-
-        # bot_cte.action(
-        #     cnpj_sender=cnpj_remetente,
-        #     cnpj_receiver=cnpj_destinatario,
-        #     payer=tomador,
-        #     payer_cnpj=tomador_cnpj
-        # )
 
         bot_cte.part3_complimentary(
             cte=cte
         )
+
         bot_cte.part4(
             tax=str(aliq),
-            icms_text=icms_obs,
+            icms_text=obs_text,
             uf=uf_rem,
             price=valor,
             complimentary=True
@@ -669,19 +654,14 @@ def cte_complimentary(unique=False):
         csv_report.at[csv_report.index[current_row], 'Protocolo'] = protocol
         csv_report.at[csv_report.index[current_row], 'CTE Complementar'] = cte_llm_complimentary
 
-        report.to_excel(
-            f'{cte_comp_path}\\CTE complementar-{now_date}-{now}.xlsx',
-            index=False
-        )
+        report.to_excel(excel_file, index=False)
 
         csv_report = csv_report.astype(str)
         csv_report = csv_report.replace(to_replace="\.0+$", value="", regex=True)
 
-        csv_report.to_csv(
-            f'{cte_comp_path}\\Upload complementar-{now_date}-{now}.csv',
-            index=False,
-            encoding='utf-8'
-        )
+        csv_report.to_csv(csv_file, index=False, encoding='utf-8')
+
+        r.post_file('https://transportebiologico.com.br/api/uploads/cte-complementary', csv_file)
 
         current_row += 1
 
@@ -699,6 +679,71 @@ def cte_unique():
         cnpj = collector.loc[collector['id'] == col, 'cnpj'].values.item()
         _cnpj_list.append(cnpj)
         return _cnpj_list
+
+    def get_address_name(add):
+        add_lenght = len(add)
+        count = 0
+        add_total = ''
+        for i in range(add_lenght):
+            add_name = address.loc[address['id'] == add[i], 'trading_name'].values.item()
+            add_branch = address.loc[address['id'] == add[i], 'branch'].values.item()
+            count += 1
+            if count != add_lenght:
+                space = "\n"
+            else:
+                space = ''
+            if add_lenght == 1:
+                listing = str(add_name)
+            else:
+                listing = str(count) + '. ' + str(add_name)
+            add_total += listing + ' - ' + add_branch + space
+        return add_total
+
+    def get_address_meta(add):
+        add_lenght = len(add)
+        count = 0
+        add_total = ''
+        for i in range(add_lenght):
+            add_street = address.loc[address['id'] == add[i], 'street'].values.item()
+            add_num = address.loc[address['id'] == add[i], 'number'].values.item()
+            add_dist = address.loc[address['id'] == add[i], 'neighborhood'].values.item()
+            add_city = address.loc[address['id'] == add[i], 'cityIDAddress.name'].values.item()
+            add_state = address.loc[address['id'] == add[i], 'state'].values.item()
+            add_cep = address.loc[address['id'] == add[i], 'cep'].values.item()
+            count += 1
+            if count != add_lenght:
+                space = "\n"
+            else:
+                space = ''
+            if add_lenght == 1:
+                listing = ''
+            else:
+                listing = str(count) + '. '
+            add_total += listing + add_street.title() + ', ' + add_num + ' - ' + add_dist.title() + ', ' \
+                         + add_city.title() + ' - ' + add_state + ', ' + add_cep + space
+        return add_total
+
+    def get_address_cnpj_listed(add_list):
+        add_lenght = len(add_list)
+        count = 0
+        add_total = ''
+        for add in add_list:
+            cnpj = address.loc[address['id'] == add, 'cnpj_cpf'].values.item()
+            count += 1
+            if count != add_lenght:
+                space = "\n"
+            else:
+                space = ''
+            if add_lenght == 1:
+                listing = ''
+            else:
+                listing = str(count) + '. '
+            add_total += listing + cnpj + space
+        return add_total
+
+    def get_collector(col):
+        col_name = collector.loc[collector['id'] == col, 'trading_name'].values.item()
+        return col_name
 
     di = cal.get_date()
     df = di
@@ -733,12 +778,55 @@ def cte_unique():
     # sv.drop(sv[sv['collectDateTime'] < di_dt].index, inplace=True)
     # sv.drop(sv[sv['collectDateTime'] > df_dt].index, inplace=True)
 
+    report['PROTOCOLO'] = sv['protocol']
+    report['CLIENTE'] = sv['customerIDService.trading_firstname']
+    report['ETAPA'] = np.select(
+        condlist=[
+            sv['step'] == 'availableService',
+            sv['step'] == 'toAllocateService',
+            sv['step'] == 'toDeliveryService',
+            sv['step'] == 'deliveringService',
+            sv['step'] == 'toLandingService',
+            sv['step'] == 'landingService',
+            sv['step'] == 'toBoardValidate',
+            sv['step'] == 'toCollectService',
+            sv['step'] == 'collectingService',
+            sv['step'] == 'toBoardService',
+            sv['step'] == 'boardingService',
+            sv['step'] == 'finishedService'],
+        choicelist=[
+            'AGUARDANDO DISPONIBILIZAÇÃO', 'AGUARDANDO ALOCAÇÃO', 'EM ROTA DE ENTREGA', 'ENTREGANDO',
+            'DISPONÍVEL PARA RETIRADA', 'DESEMBARCANDO', 'VALIDAR EMBARQUE', 'AGENDADO', 'COLETANDO',
+            'EM ROTA DE EMBARQUE', 'EMBARCANDO SERVIÇO', 'FINALIZADO'],
+        default=0
+    )
+    report['DATA COLETA'] = sv['collectDateTime'].dt.strftime(date_format='%d/%m/%Y')
+    report['PREÇO TRANSPORTE'] = sv['serviceIDRequested.budgetIDService.price']
+    report['PREÇO KG EXTRA'] = sv['serviceIDRequested.budgetIDService.price_kg_extra']
+    report['NOME REMETENTE'] = sv['serviceIDRequested.source_address_id'].map(get_address_name)
+    report['CIDADE ORIGEM'] = sv['origCity']
+    report['ENDEREÇO REMETENTE'] = sv['serviceIDRequested.source_address_id'].map(get_address_meta)
+    report['CNPJ/CPF REMETENTE'] = sv['serviceIDRequested.source_address_id'].map(get_address_cnpj_listed)
+    report['COLETADOR ORIGEM'] = sv['serviceIDRequested.source_collector_id'].map(get_collector)
+    report['NOME DESTINATÁRIO'] = sv['serviceIDRequested.destination_address_id'].map(get_address_name)
+    report['CIDADE DESTINO'] = sv['destCity']
+    report['ENDEREÇO DESTINATÁRIO'] = sv['serviceIDRequested.destination_address_id'].map(get_address_meta)
+    report['CNPJ/CPF DESTINATÁRIO'] = sv['serviceIDRequested.destination_address_id'].map(get_address_cnpj_listed)
+    report['COLETADOR DESTINO'] = sv['serviceIDRequested.destination_collector_id'].map(get_collector)
+
+    excel_file = f'{cte_path}\\Lista CTE-{now_date}-{now}.xlsx'
+    csv_file = f'{cte_path}\\Upload-{now_date}-{now}.csv'
+
+    report.to_excel(excel_file, index=False)
+
     protocol_entry = cte_s.get()
     protocol_list = protocol_entry.split(";")
 
-    csv_report = pd.DataFrame(columns=['Protocolo', 'CTE Loglife', 'nan'])
+    report_date = dt.datetime.strftime(dt.datetime.now(), '%d/%m/%Y')
+
+    csv_report = pd.DataFrame(columns=['Protocolo', 'CTE Loglife', 'Data Emissão CTE'])
     csv_report['Protocolo'] = sv['protocol']
-    csv_report['nan'] = sv['protocol'] - sv['protocol']
+    csv_report['Data Emissão CTE'] = report_date
 
     bot_cte = bot.Bot()
 
@@ -817,23 +905,24 @@ def cte_unique():
         if cte_type.get() == 0:
             cte_llm = int(bot_cte.get_clipboard())
 
+            report.at[report.index[current_row], 'CTE LOGLIFE'] = cte_llm
+            report.to_excel(excel_file, index=False)
+
             csv_report.at[csv_report.index[current_row], 'Protocolo'] = protocol
             csv_report.at[csv_report.index[current_row], 'CTE Loglife'] = cte_llm
 
             csv_report = csv_report.astype(str)
             csv_report = csv_report.replace(to_replace="\.0+$", value="", regex=True)
 
-            csv_report.to_csv(
-                f'{cte_path}\\Upload-{now_date}-{now}.csv',
-                index=False
-            )
+            csv_report.to_csv(csv_file, index=False)
+
+            r.post_file('https://transportebiologico.com.br/api/uploads/cte-loglife', csv_file)
 
             current_row += 1
 
 
 r = RequestDataFrame()
 
-header = {"xtoken": "myqhF6Nbzx"}
 uf_base = pd.read_excel('Complementares.xlsx', sheet_name='Plan1')
 aliquota_base = pd.read_excel('Alíquota.xlsx', sheet_name='Planilha1')
 
