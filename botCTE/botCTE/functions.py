@@ -2,8 +2,10 @@ import threading
 from json import loads
 from tkinter import filedialog as fd
 from tkinter import ttk
+import csv
 
 import pandas as pd
+import numpy as np
 import requests
 import xlwings as xw
 from pythoncom import CoInitialize
@@ -76,7 +78,7 @@ class Browse:
             self.label_variable.grid(**grid_config)
 
     def browse_exe(self, filename_variable=None, archive_name=None, master=None,
-                     label_config=None, grid_config=None):
+                   label_config=None, grid_config=None):
         filetypes = (('Arquivo executável', '*.exe'),)
 
         file_name = fd.askopenfilename(
@@ -103,6 +105,9 @@ class RequestDataFrame:
         key = requests.post('https://transportebiologico.com.br/api/sessions', json=details)
         key_json = loads(key.text)
         self.auth = {"authorization": key_json['token']}
+        self.file_auth = {"authorization": key_json['token'],
+                          'Content-Type': 'multipart/form-data',
+                          'boundary': '----WebKitFormBoundaryKUpFTtNyFBN'}
 
     def request_public(self, link):
         response = requests.get(link, headers=self.headers)
@@ -124,6 +129,25 @@ class RequestDataFrame:
         dataframe = pd.json_normalize(response_json)
 
         return dataframe
+
+    def post_file(self, link, file):
+
+        payload = {
+            "csv_file": (
+                file,
+                open(file, "rb"),
+                "text/csv",
+                {"Expires": "0"},
+            )
+        }
+
+        # payload = {
+        #     'csv_file': files
+        # }
+        response = requests.post(url=link, headers=self.auth,
+                                 files=payload)
+
+        return response.text
 
 
 def export_to_excel(df, excel_name, sheet="Planilha1", clear_range="A1:A1", autofit=True, change_header=True,
@@ -174,3 +198,14 @@ def clear_data(filename, *sheet):
         if wb.sheets[f'{terms[0]}'].api.AutoFilter:
             wb.sheets[f'{terms[0]}'].api.AutoFilter.ShowAllData()
         ws.range(terms[1]).clear_contents()
+
+
+def post_file():
+    r = RequestDataFrame()
+    printout = r.post_file(link='https://transportebiologico.com.br/api/uploads/cte-loglife',
+                           file='Upload-29-03-2023-20-02.csv')
+    print(printout)
+
+
+if __name__ == "__main__":
+    post_file()

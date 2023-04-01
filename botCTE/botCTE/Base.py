@@ -229,6 +229,9 @@ def cte_list():
 
     for protocol in sv['protocol']:
 
+        excel_file = f'{cte_path}\\Lista CTE-{now_date}-{now}.xlsx'
+        csv_file = f'{cte_path}\\Upload-{now_date}-{now}.csv'
+
         tomador_cnpj = sv.loc[sv['protocol'] == protocol, 'customerIDService.cnpj_cpf'].values.item()
         source_add = sv.loc[sv['protocol'] == protocol, 'serviceIDRequested.source_address_id'].values.item()
         destination_add = sv.loc[sv['protocol'] == protocol, 'serviceIDRequested.destination_address_id'].values.item()
@@ -276,7 +279,7 @@ def cte_list():
         csv_report.at[csv_report.index[current_row], 'CTE Loglife'] = cte_llm
 
         report.to_excel(
-            f'{cte_path}\\Lista CTE-{now_date}-{now}.xlsx',
+            excel_file,
             index=False
         )
 
@@ -284,9 +287,11 @@ def cte_list():
         csv_report = csv_report.replace(to_replace="\.0+$", value="", regex=True)
 
         csv_report.to_csv(
-            f'{cte_path}\\Upload-{now_date}-{now}.csv',
+            csv_file,
             index=False,
         )
+
+        post_private('https://transportebiologico.com.br/api/uploads/cte-loglife', csv_file)
 
         current_row += 1
 
