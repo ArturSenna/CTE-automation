@@ -1,14 +1,5 @@
-import csv
+cte = "541631"
 
-with open('Upload-29-03-2023-20-02.csv', 'r', encoding='utf-8') as csv_file:
-    print(type(csv_file))
+cte = cte.zfill(8)
 
-
-files = {
-    "csv_file": (
-        "Upload-29-03-2023-20-02.csv.csv",
-        open("Upload-29-03-2023-20-02.csv", "rb"),
-        "text/csv",
-        {"Expires": "0"},
-    )
-}
+print(cte)

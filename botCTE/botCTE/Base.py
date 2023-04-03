@@ -211,6 +211,7 @@ def cte_list():
 
     excel_file = f'{cte_path}\\Lista CTE-{now_date}-{now}.xlsx'
     csv_file = f'{cte_path}\\Upload-{now_date}-{now}.csv'
+    csv_associate = f'{cte_path}\\Associar-{now_date}-{now}.csv'
 
     report.to_excel(excel_file, index=False)
 
@@ -244,7 +245,7 @@ def cte_list():
         obs_text = f'Protocolo {protocol} - {icms_obs}'
 
         if uf_rem != "MG":
-            aliq_text = float(aliq)*float(valor)*0.008
+            aliq_text = float(aliq) * float(valor) * 0.008
             aliq_text = "{:0.2f}".format(aliq_text)
             obs_text = obs_text.replace('#', aliq_text)
             aliq = "0"
@@ -275,6 +276,13 @@ def cte_list():
         csv_report.at[csv_report.index[current_row], 'Protocolo'] = protocol
         csv_report.at[csv_report.index[current_row], 'CTE Loglife'] = cte_llm
 
+        cte_file = f'{str(cte_llm).zfill(8)}.pdf'
+
+        cte_csv = pd.DataFrame({
+            'Protocolo': [protocol],
+            'Arquivo PDF': [cte_file],
+        })
+
         report.to_excel(
             excel_file,
             index=False
@@ -283,19 +291,30 @@ def cte_list():
         csv_report = csv_report.astype(str)
         csv_report = csv_report.replace(to_replace="\.0+$", value="", regex=True)
 
-        csv_report.to_csv(
-            csv_file,
-            index=False,
-            encoding='utf-8'
-        )
+        csv_report.to_csv(csv_file, index=False, encoding='utf-8')
+
+        cte_csv.to_csv(csv_associate, index=False, encoding='utf-8')
 
         r.post_file('https://transportebiologico.com.br/api/uploads/cte-loglife', csv_file)
 
+        r.post_file("https://transportebiologico.com.br/api/pdf",
+                    f'{cte_folder.get()}\\{cte_file}',
+                    upload_type="CTE LOGLIFE",
+                    file_format="application/pdf",
+                    file_type="pdf_files")
+
+        r.post_file('https://transportebiologico.com.br/api/pdf/associate',
+                    csv_associate,
+                    upload_type="CTE LOGLIFE")
+
+        os.remove(csv_associate)
+
         current_row += 1
+
+    confirmation_pop_up()
 
 
 def cte_complimentary(unique=False):
-
     def get_address_name(add):
         add_lenght = len(add)
         count = 0
@@ -524,7 +543,7 @@ def cte_complimentary(unique=False):
     sv['QTD. END. ORIGEM NO ORÇAMENTO'] = sv['serviceIDRequested.budgetIDService.source_address_qty']
     sv['VALOR COLETA ADICIONAL'] = sv['serviceIDRequested.budgetIDService.price_add_collect']
     sv['VALOR TOTAL COLETAS ADICIONAIS'] = (sv['QTD. END. ORIGEM NO SERVIÇO']
-                                                - sv['QTD. END. ORIGEM NO ORÇAMENTO'].astype(int))
+                                            - sv['QTD. END. ORIGEM NO ORÇAMENTO'].astype(int))
     sv['VALOR TOTAL COLETAS ADICIONAIS'] = np.where(
         sv['VALOR TOTAL COLETAS ADICIONAIS'] < 0,
         0,
@@ -535,7 +554,7 @@ def cte_complimentary(unique=False):
     sv['QTD. END. DESTINO NO ORÇAMENTO'] = sv['serviceIDRequested.budgetIDService.destination_address_qty']
     sv['VALOR ENTREGA ADICIONAL'] = sv['serviceIDRequested.budgetIDService.price_add_delivery']
     sv['VALOR TOTAL ENTREGAS ADICIONAIS'] = (sv['QTD. END. DESTINO NO SERVIÇO']
-                                                 - sv['QTD. END. DESTINO NO ORÇAMENTO'].astype(int))
+                                             - sv['QTD. END. DESTINO NO ORÇAMENTO'].astype(int))
     sv['VALOR TOTAL ENTREGAS ADICIONAIS'] = np.where(
         sv['VALOR TOTAL ENTREGAS ADICIONAIS'] < 0,
         0,
@@ -632,7 +651,7 @@ def cte_complimentary(unique=False):
         obs_text = f'Protocolo {protocol} - {icms_obs}'
 
         if uf_rem != "MG":
-            aliq_text = float(aliq)*float(valor)*0.008
+            aliq_text = float(aliq) * float(valor) * 0.008
             aliq_text = "{:0.2f}".format(aliq_text)
             obs_text = obs_text.replace('#', aliq_text)
             aliq = "0"
@@ -664,6 +683,8 @@ def cte_complimentary(unique=False):
         r.post_file('https://transportebiologico.com.br/api/uploads/cte-complementary', csv_file)
 
         current_row += 1
+
+    confirmation_pop_up()
 
 
 def cte_unique():
@@ -745,8 +766,31 @@ def cte_unique():
         col_name = collector.loc[collector['id'] == col, 'trading_name'].values.item()
         return col_name
 
+    def get_address_city(add):
+        add_lenght = len(add)
+        add_total = []
+        count = 0
+        cities = ''
+        for i in range(add_lenght):
+            add_city = address.loc[address['id'] == add[i], 'cityIDAddress.name'].values.item()
+            add_total.append(add_city)
+        add_total = np.unique(add_total)
+        for p in add_total:
+            if count == 0:
+                cities = p
+            elif count == len(add_total) - 1:
+                cities += ', ' + p
+            else:
+                cities += ', ' + p
+            count += 1
+        return cities
+
     di = cal.get_date()
     df = di
+
+    now = dt.datetime.now()
+    now_date = dt.datetime.strftime(di, '%d-%m-%Y')
+    now = dt.datetime.strftime(now, "%H-%M")
 
     di = dt.datetime.strftime(di, '%d/%m/%Y')
     df = dt.datetime.strftime(df, '%d/%m/%Y')
@@ -775,8 +819,13 @@ def cte_unique():
     sv['collectDateTime'] = pd.to_datetime(sv['serviceIDRequested.collect_date']) - dt.timedelta(hours=3)
     sv['collectDateTime'] = sv['collectDateTime'].dt.tz_localize(None)
 
+    sv['origCity'] = sv['serviceIDRequested.source_address_id'].map(get_address_city)
+    sv['destCity'] = sv['serviceIDRequested.destination_address_id'].map(get_address_city)
+
     # sv.drop(sv[sv['collectDateTime'] < di_dt].index, inplace=True)
     # sv.drop(sv[sv['collectDateTime'] > df_dt].index, inplace=True)
+
+    report = pd.DataFrame(columns=[])
 
     report['PROTOCOLO'] = sv['protocol']
     report['CLIENTE'] = sv['customerIDService.trading_firstname']
@@ -814,13 +863,17 @@ def cte_unique():
     report['CNPJ/CPF DESTINATÁRIO'] = sv['serviceIDRequested.destination_address_id'].map(get_address_cnpj_listed)
     report['COLETADOR DESTINO'] = sv['serviceIDRequested.destination_collector_id'].map(get_collector)
 
+    cte_path = folderpath.get()
+    cte_path = cte_path.replace('/', '\\')
+
     excel_file = f'{cte_path}\\Lista CTE-{now_date}-{now}.xlsx'
     csv_file = f'{cte_path}\\Upload-{now_date}-{now}.csv'
 
-    report.to_excel(excel_file, index=False)
-
     protocol_entry = cte_s.get()
     protocol_list = protocol_entry.split(";")
+
+    report = report[report['PROTOCOLO'].isin([int(x) for x in protocol_list])]
+    report.to_excel(excel_file, index=False)
 
     report_date = dt.datetime.strftime(dt.datetime.now(), '%d/%m/%Y')
 
@@ -845,7 +898,7 @@ def cte_unique():
         icms_obs = uf_base.loc[uf_base['Estado'] == uf_rem, 'Info'].values.item()
         aliq = aliquota_base.loc[aliquota_base['UF'] == uf_rem, uf_dest].values.item()
         if uf_rem != "MG":
-            aliq_text = float(aliq)*5*0.008
+            aliq_text = float(aliq) * 5 * 0.008
             aliq_text = "{:0.2f}".format(aliq_text)
             icms_obs = icms_obs.replace('#', aliq_text)
             aliq = "0"
@@ -920,6 +973,8 @@ def cte_unique():
 
             current_row += 1
 
+    confirmation_pop_up()
+
 
 r = RequestDataFrame()
 
@@ -946,8 +1001,7 @@ tab4 = ttk.Frame(tabs)
 tabs.add(tab1, text='CTe')
 tabs.add(tab2, text='CTe complementar')
 tabs.add(tab4, text='Pastas Relatório')
-tabs.add(tab3, text='BSoft')
-
+tabs.add(tab3, text='Pasta CTE')
 
 tabs.pack(expand=1, fill="both")
 
@@ -1005,18 +1059,18 @@ cal2.grid(column=1, row=1, padx=30, pady=10, sticky="E, W")
 
 # Read file name
 
-filename = StringVar()
+cte_folder = StringVar()
 
 try:
     with open('filename.txt') as m:
         text = m.read()
     lines = text.split('\n')
-    filename.set(lines[0])
+    cte_folder.set(lines[0])
 except FileNotFoundError:
-    filename.set('Bsoft Web.exe')
+    cte_folder.set('Pasta onde os arquivos CTe estão.')
 
-filename_Label = ttk.Label(tab3, width=20, text=filename.get(), wraplength=140)
-filename_Label.grid(column=1, row=0, padx=5, pady=5, ipadx=8)
+cte_Folder_Label = ttk.Label(tab3, width=20, text=cte_folder.get(), wraplength=140)
+cte_Folder_Label.grid(column=1, row=0, padx=5, pady=5, ipadx=8)
 
 # Read folder path
 
@@ -1046,7 +1100,7 @@ except FileNotFoundError:
 folder_Label2 = ttk.Label(tab4_frame, width=20, text=folderpath2.get(), wraplength=140)
 folder_Label2.grid(column=1, row=1, sticky="E, W", padx=20, pady=10)
 
-browse1 = Browse(filename_Label)
+browse1 = Browse(cte_Folder_Label)
 browse2 = Browse(folder_Label)
 browse3 = Browse(folder_Label2)
 
@@ -1077,12 +1131,11 @@ ttk.Button(tab2_frame2,
 
 ttk.Button(tab3,
            text="Procurar",
-           command=lambda: browse1.browse_exe(filename, 'filename.txt', master=tab3,
-                                                label_config={'wraplength': 140, 'width': 20},
-                                                grid_config={'column': 1, 'row': 0, 'sticky': "E, W", 'padx': 20,
-                                                             'pady': 10})
+           command=lambda: browse1.browse_folder(cte_folder, 'filename.txt', master=tab3,
+                                                 label_config={'wraplength': 140, 'width': 20},
+                                                 grid_config={'column': 1, 'row': 0, 'sticky': "E, W", 'padx': 20,
+                                                              'pady': 10})
            ).grid(column=2, row=0, padx=5, pady=5, sticky="E, W")
-ttk.Button(tab3, text="Salvar").grid(column=2, row=1, padx=5, pady=5, rowspan=2, ipady=13, sticky="E, W")
 
 ttk.Button(tab4_frame,
            text="Procurar",
@@ -1100,7 +1153,6 @@ ttk.Button(tab4_frame,
                                                               'pady': 10})
            ).grid(column=2, row=1, padx=5, pady=5, sticky="E, W")
 
-
 # Labels
 
 ttk.Label(tab1, text="Data da Emissão:").grid(column=0, row=0, padx=10, pady=10, sticky='W, E')
@@ -1112,9 +1164,7 @@ ttk.Label(tab2_frame, text="Data Final:").grid(column=0, row=1, padx=10, pady=10
 
 ttk.Label(tab2_frame2, text="CTe avulso:").grid(column=0, row=0, padx=10, pady=10, sticky='W, E')
 
-ttk.Label(tab3, text="Nome do Arquivo:").grid(column=0, row=0, padx=5, pady=5, ipadx=10)
-ttk.Label(tab3, text='Usuário:').grid(column=0, row=1, padx=5, pady=5, ipadx=10)
-ttk.Label(tab3, text='Senha:').grid(column=0, row=2, padx=5, pady=5, ipadx=10)
+ttk.Label(tab3, text="Pasta CTE:").grid(column=0, row=0, padx=5, pady=5, ipadx=10)
 
 ttk.Label(tab4_frame, text="CTe normal:").grid(column=0, row=0, padx=5, pady=5)
 ttk.Label(tab4_frame, text="CTe complementar:").grid(column=0, row=1, padx=5, pady=5)
@@ -1130,14 +1180,6 @@ cte_cs = StringVar()
 
 ttk.Entry(tab2_frame2,
           textvariable=cte_cs, width=14).grid(column=1, row=0, padx=10, pady=10)
-
-login = StringVar()
-password = StringVar()
-
-ttk.Entry(tab3,
-          textvariable=login).grid(column=1, row=1, padx=5, pady=10, sticky='E, W')
-ttk.Entry(tab3,
-          textvariable=password).grid(column=1, row=2, padx=5, pady=5, sticky='E, W')
 
 volumes = StringVar()
 ttk.Entry(tab1,

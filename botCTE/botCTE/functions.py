@@ -1,14 +1,15 @@
 import threading
 from json import loads
 from tkinter import filedialog as fd
+from tkinter import Toplevel
 from tkinter import ttk
 import csv
 
 import pandas as pd
 import numpy as np
 import requests
-import xlwings as xw
-from pythoncom import CoInitialize
+# import xlwings as xw
+# from pythoncom import CoInitialize
 
 
 class Start:
@@ -142,72 +143,97 @@ class RequestDataFrame:
         }
 
         if upload_type is not None:
-            json_data = {
+            upload_type = {
                 "type": upload_type
             }
-        else:
-            json_data = None
 
-        response = requests.post(url=link, headers=self.auth, files=payload, data=json_data)
+        response = requests.post(url=link, headers=self.auth, files=payload, data=upload_type)
 
-        return response.text
+        return response
 
 
-def export_to_excel(df, excel_name, sheet="Planilha1", clear_range="A1:A1", autofit=True, change_header=True,
-                    start_write=None, clear_filters=False):
-    app = xw.App(visible=False)
-    wb = xw.Book(f'{excel_name}')
-    ws = wb.sheets[f'{sheet}']
-    app.kill()
-    if wb.sheets[f'{sheet}'].api.AutoFilter:
-        wb.sheets[f'{sheet}'].api.AutoFilter.ShowAllData()
-    elif clear_filters:
-        wb.sheets[f'{sheet}'].api.AutoFilter.ShowAllData()
-    ws.range(clear_range).clear_contents()
+# def export_to_excel(df, excel_name, sheet="Planilha1", clear_range="A1:A1", autofit=True, change_header=True,
+#                     start_write=None, clear_filters=False):
+#     app = xw.App(visible=False)
+#     wb = xw.Book(f'{excel_name}')
+#     ws = wb.sheets[f'{sheet}']
+#     app.kill()
+#     if wb.sheets[f'{sheet}'].api.AutoFilter:
+#         wb.sheets[f'{sheet}'].api.AutoFilter.ShowAllData()
+#     elif clear_filters:
+#         wb.sheets[f'{sheet}'].api.AutoFilter.ShowAllData()
+#     ws.range(clear_range).clear_contents()
+#
+#     if start_write is None:
+#
+#         if change_header:
+#             start_write = "A1"
+#             header_config = 1
+#         else:
+#             start_write = "A2"
+#             header_config = 0
+#     else:
+#
+#         if change_header:
+#             header_config = 1
+#         else:
+#             header_config = 0
+#
+#     # Inserção do DataFrame na planilha
+#     ws[f"{start_write}"].options(pd.DataFrame, header=header_config, index=False, expand='table').value = df
+#
+#     if autofit:
+#         ws.autofit('r')
+#
+#
+# def clear_data(filename, *sheet):
+#     file_name = filename.replace('/', '\\')
+#
+#     CoInitialize()
+#
+#     for value in sheet:
+#         app = xw.App(visible=False)
+#         wb = xw.Book(f"{file_name}")
+#         terms = value.split(';')
+#         ws = wb.sheets[f'{terms[0]}']
+#         app.kill()
+#         if wb.sheets[f'{terms[0]}'].api.AutoFilter:
+#             wb.sheets[f'{terms[0]}'].api.AutoFilter.ShowAllData()
+#         ws.range(terms[1]).clear_contents()
 
-    if start_write is None:
 
-        if change_header:
-            start_write = "A1"
-            header_config = 1
-        else:
-            start_write = "A2"
-            header_config = 0
-    else:
+def confirmation_pop_up():
 
-        if change_header:
-            header_config = 1
-        else:
-            header_config = 0
-
-    # Inserção do DataFrame na planilha
-    ws[f"{start_write}"].options(pd.DataFrame, header=header_config, index=False, expand='table').value = df
-
-    if autofit:
-        ws.autofit('r')
-
-
-def clear_data(filename, *sheet):
-    file_name = filename.replace('/', '\\')
-
-    CoInitialize()
-
-    for value in sheet:
-        app = xw.App(visible=False)
-        wb = xw.Book(f"{file_name}")
-        terms = value.split(';')
-        ws = wb.sheets[f'{terms[0]}']
-        app.kill()
-        if wb.sheets[f'{terms[0]}'].api.AutoFilter:
-            wb.sheets[f'{terms[0]}'].api.AutoFilter.ShowAllData()
-        ws.range(terms[1]).clear_contents()
+    pop = Toplevel(root)
+    pop.iconbitmap('my_icon.ico')
+    pop.attributes('-topmost', 'true')
+    pop.geometry("250x50")
+    pop.title("Confirmação de emissão")
+    thread_pop = Start(pop)
+    ttk.Label(pop, text="Emissões realizadas com sucesso!").pack()
+    ttk.Button(
+        pop,
+        text="OK",
+        command=lambda: thread_pop.start_thread(lambda: [pop.destroy()])
+    ).pack()
 
 
 def post_file():
+
     r = RequestDataFrame()
-    printout = r.post_file(link='https://transportebiologico.com.br/api/uploads/cte-loglife',
-                           file='Upload-29-03-2023-20-02.csv')
-    print(printout)
+
+    printout = r.post_file("https://transportebiologico.com.br/api/pdf",
+                           '00059290.pdf',
+                           upload_type="CTE LOGLIFE",
+                           file_format="application/pdf",
+                           file_type="pdf_files")
+
+    printout1 = r.post_file('https://transportebiologico.com.br/api/pdf/associate',
+                            'UploadCTE.csv',
+                            upload_type="CTE LOGLIFE")
+
+    print(printout.text, printout)
+    print(printout1.text, printout1)
 
 
 if __name__ == "__main__":
