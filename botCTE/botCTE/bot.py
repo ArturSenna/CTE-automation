@@ -337,7 +337,7 @@ class Bot(DesktopBot):
         self.enter()
 
         if self.find( "fifthPopUp", matching=0.97, waiting_time=60000):
-            self.enter()
+            self.key_f10()
         self.wait(2000)
 
         # self.action()

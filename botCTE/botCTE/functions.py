@@ -130,18 +130,25 @@ class RequestDataFrame:
 
         return dataframe
 
-    def post_file(self, link, file):
+    def post_file(self, link, file, file_type="csv_file", file_format="text/csv", upload_type=None):
 
         payload = {
-            "csv_file": (
+            file_type: (
                 file,
                 open(file, "rb"),
-                "text/csv",
+                file_format,
                 {"Expires": "0"},
             )
         }
 
-        response = requests.post(url=link, headers=self.auth, files=payload)
+        if upload_type is not None:
+            json_data = {
+                "type": upload_type
+            }
+        else:
+            json_data = None
+
+        response = requests.post(url=link, headers=self.auth, files=payload, data=json_data)
 
         return response.text
 
