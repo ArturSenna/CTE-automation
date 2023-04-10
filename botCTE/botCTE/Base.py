@@ -979,23 +979,27 @@ def cte_unique():
             price=valor
         )
 
-        if cte_type.get() == 0:
-            cte_llm = int(bot_cte.get_clipboard())
+        cte_llm = int(bot_cte.get_clipboard())
 
-            report.at[report.index[current_row], 'CTE LOGLIFE'] = cte_llm
-            report.to_excel(excel_file, index=False)
+        report.at[report.index[current_row], 'CTE LOGLIFE'] = cte_llm
+        report.to_excel(excel_file, index=False)
 
-            csv_report.at[csv_report.index[current_row], 'Protocolo'] = protocol
-            csv_report.at[csv_report.index[current_row], 'CTE Loglife'] = cte_llm
+        csv_report.at[csv_report.index[current_row], 'Protocolo'] = protocol
+        csv_report.at[csv_report.index[current_row], 'CTE Loglife'] = cte_llm
 
-            csv_report = csv_report.astype(str)
-            csv_report = csv_report.replace(to_replace="\.0+$", value="", regex=True)
+        csv_report = csv_report.astype(str)
+        csv_report = csv_report.replace(to_replace="\.0+$", value="", regex=True)
 
-            csv_report.to_csv(csv_file, index=False)
+        csv_report.to_csv(csv_file, index=False)
 
-            r.post_file('https://transportebiologico.com.br/api/uploads/cte-loglife', csv_file)
+        r.post_file('https://transportebiologico.com.br/api/uploads/cte-loglife', csv_file)
 
-            current_row += 1
+        os.remove(csv_file)
+
+        if cte_type.get() == 1:
+            os.remove(excel_file)
+
+        current_row += 1
 
     confirmation_pop_up()
 
