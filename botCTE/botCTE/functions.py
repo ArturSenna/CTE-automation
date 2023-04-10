@@ -223,7 +223,7 @@ def post_file():
     r = RequestDataFrame()
 
     protocol = 59565
-    cte_file = '00059432.pdf'
+    cte_file = '09432.pdf'
 
     cte_csv = pd.DataFrame({
         'Protocolo': [protocol],

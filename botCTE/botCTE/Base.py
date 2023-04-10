@@ -297,11 +297,17 @@ def cte_list():
 
         r.post_file('https://transportebiologico.com.br/api/uploads/cte-loglife', csv_file)
 
-        r.post_file("https://transportebiologico.com.br/api/pdf",
-                    f'{cte_folder.get()}\\{cte_file}',
-                    upload_type="CTE LOGLIFE",
-                    file_format="application/pdf",
-                    file_type="pdf_files")
+        while True:
+            try:
+                r.post_file("https://transportebiologico.com.br/api/pdf",
+                            f'{cte_folder.get()}\\{cte_file}',
+                            upload_type="CTE LOGLIFE",
+                            file_format="application/pdf",
+                            file_type="pdf_files")
+                break
+            except FileNotFoundError:
+                time.sleep(0.5)
+                continue
 
         r.post_file('https://transportebiologico.com.br/api/pdf/associate',
                     csv_associate,
@@ -690,11 +696,17 @@ def cte_complimentary(unique=False):
 
         r.post_file('https://transportebiologico.com.br/api/uploads/cte-complementary', csv_file)
 
-        r.post_file("https://transportebiologico.com.br/api/pdf",
-                    f'{cte_folder.get()}\\{cte_file}',
-                    upload_type="CTE COMPLEMENTAR",
-                    file_format="application/pdf",
-                    file_type="pdf_files")
+        while True:
+            try:
+                r.post_file("https://transportebiologico.com.br/api/pdf",
+                            f'{cte_folder.get()}\\{cte_file}',
+                            upload_type="CTE COMPLEMENTAR",
+                            file_format="application/pdf",
+                            file_type="pdf_files")
+                break
+            except FileNotFoundError:
+                time.sleep(0.5)
+                continue
 
         r.post_file('https://transportebiologico.com.br/api/pdf/associate',
                     csv_associate,
