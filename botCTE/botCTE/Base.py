@@ -279,7 +279,7 @@ def cte_list():
         cte_file = f'{str(cte_llm).zfill(8)}.pdf'
 
         cte_csv = pd.DataFrame({
-            'Protocolo': [protocol],
+            'Protocolo': [int(protocol)],
             'Arquivo PDF': [cte_file],
         })
 
@@ -623,6 +623,7 @@ def cte_complimentary(unique=False):
 
     excel_file = f'{cte_comp_path}\\CTE complementar-{now_date}-{now}.xlsx'
     csv_file = f'{cte_comp_path}\\Upload complementar-{now_date}-{now}.csv'
+    csv_associate = f'{cte_path}\\Associar complementar-{now_date}-{now}.csv'
 
     report.to_excel(excel_file, index=False)
 
@@ -673,14 +674,33 @@ def cte_complimentary(unique=False):
         csv_report.at[csv_report.index[current_row], 'Protocolo'] = protocol
         csv_report.at[csv_report.index[current_row], 'CTE Complementar'] = cte_llm_complimentary
 
+        cte_file = f'{str(cte_llm_complimentary).zfill(8)}.pdf'
+
+        cte_csv = pd.DataFrame({
+            'Protocolo': [protocol],
+            'Arquivo PDF': [cte_file],
+        })
+
         report.to_excel(excel_file, index=False)
 
         csv_report = csv_report.astype(str)
         csv_report = csv_report.replace(to_replace="\.0+$", value="", regex=True)
 
-        csv_report.to_csv(csv_file, index=False, encoding='utf-8')
+        cte_csv.to_csv(csv_associate, index=False, encoding='utf-8')
 
         r.post_file('https://transportebiologico.com.br/api/uploads/cte-complementary', csv_file)
+
+        r.post_file("https://transportebiologico.com.br/api/pdf",
+                    f'{cte_folder.get()}\\{cte_file}',
+                    upload_type="CTE COMPLEMENTAR",
+                    file_format="application/pdf",
+                    file_type="pdf_files")
+
+        r.post_file('https://transportebiologico.com.br/api/pdf/associate',
+                    csv_associate,
+                    upload_type="CTE COMPLEMENTAR")
+
+        csv_report.to_csv(csv_file, index=False, encoding='utf-8')
 
         current_row += 1
 
@@ -866,7 +886,11 @@ def cte_unique():
     cte_path = folderpath.get()
     cte_path = cte_path.replace('/', '\\')
 
-    excel_file = f'{cte_path}\\Lista CTE-{now_date}-{now}.xlsx'
+    if cte_type.get() == 0:
+        excel_file = f'{cte_path}\\Lista CTE-{now_date}-{now}.xlsx'
+    else:
+        excel_file = f'{cte_path}\\CTe Simbólico-{now_date}-{now}.xlsx'
+
     csv_file = f'{cte_path}\\Upload-{now_date}-{now}.csv'
 
     protocol_entry = cte_s.get()

@@ -222,14 +222,24 @@ def post_file():
 
     r = RequestDataFrame()
 
+    protocol = 59565
+    cte_file = '00059432.pdf'
+
+    cte_csv = pd.DataFrame({
+        'Protocolo': [protocol],
+        'Arquivo PDF': [cte_file],
+    })
+
+    cte_csv.to_csv('AssociarPDF.csv', index=False, encoding='utf-8')
+
     printout = r.post_file("https://transportebiologico.com.br/api/pdf",
-                           '00059290.pdf',
+                           cte_file,
                            upload_type="CTE LOGLIFE",
                            file_format="application/pdf",
                            file_type="pdf_files")
 
     printout1 = r.post_file('https://transportebiologico.com.br/api/pdf/associate',
-                            'UploadCTE.csv',
+                            'AssociarPDF.csv',
                             upload_type="CTE LOGLIFE")
 
     print(printout.text, printout)
