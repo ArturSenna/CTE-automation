@@ -1,5 +1,6 @@
 from botcity.core import DesktopBot
 from ctypes import windll
+import time
 
 
 # Uncomment the line below for integrations with BotMaestro
@@ -159,6 +160,11 @@ class Bot(DesktopBot):
             self.not_found("IncludeNat")
         self.click()
 
+        if self.find("NF-e", matching=0.97, waiting_time=1000):
+            self.click()
+            self.type_up()
+            self.enter()
+
         if not self.find( "Nat", matching=0.97, waiting_time=10000):
             self.not_found("Nat")
         self.click()
@@ -303,9 +309,10 @@ class Bot(DesktopBot):
             self.click_relative(205, 66)
 
         if complimentary:
-            if not self.find( "confirmValue", matching=0.97, waiting_time=10000):
+            if self.find( "confirmValue", matching=0.97, waiting_time=10000):
+                self.enter()
+            else:
                 self.not_found("confirmValue")
-            self.enter()
 
         if not self.find( 'confirmEmission', matching=0.97, waiting_time=60000):
             self.not_found("confirmEmission")

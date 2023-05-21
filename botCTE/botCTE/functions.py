@@ -3,8 +3,8 @@ from json import loads
 from tkinter import filedialog as fd
 from tkinter import Toplevel
 from tkinter import ttk
+from tkinter import *
 import csv
-
 import pandas as pd
 import numpy as np
 import requests
@@ -202,7 +202,7 @@ class RequestDataFrame:
 #         ws.range(terms[1]).clear_contents()
 
 
-def confirmation_pop_up():
+def confirmation_pop_up(root):
 
     pop = Toplevel(root)
     pop.iconbitmap('my_icon.ico')
