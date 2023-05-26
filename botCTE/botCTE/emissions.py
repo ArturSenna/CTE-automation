@@ -3,7 +3,6 @@ import os
 import time
 
 import numpy as np
-
 import bot
 from functions import *
 
@@ -371,7 +370,7 @@ def cte_complimentary(start_date, final_date, cte_comp_path, cte_folder, root, u
         return cities_list
 
     def materials_value(mat_list, price):
-        price_list = [5, 5, 10, 10, 12.5, 12.5, 0, price, 10]
+        price_list = [5, 5, 10, 10, 12.5, 12.5, 0, price]
         total_price = 0
         for material, mat_price in zip(mat_list, price_list):
             total_price += material * mat_price
@@ -479,8 +478,7 @@ def cte_complimentary(start_date, final_date, cte_comp_path, cte_folder, root, u
                  'isopor7l',
                  'terciaria8l',
                  'caixa_termica',
-                 'gelo_seco',
-                 'embalagem_secundaria_pote_1l']
+                 'gelo_seco']
 
     for mat in materials:
         mt[f'{mat}Extra'] = sv[f'serviceIDRequested.{mat}'] - sv[f'serviceIDRequested.budgetIDService.{mat}']
@@ -496,8 +494,7 @@ def cte_complimentary(start_date, final_date, cte_comp_path, cte_folder, root, u
                        rows.isopor7lExtra,
                        rows.terciaria8lExtra,
                        rows.caixa_termicaExtra,
-                       rows.gelo_secoExtra,
-                       rows.embalagem_secundaria_pote_1lExtra]
+                       rows.gelo_secoExtra]
 
         extra_list.append(extram_list)
 
