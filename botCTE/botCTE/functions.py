@@ -8,6 +8,8 @@ import csv
 import pandas as pd
 import numpy as np
 import requests
+
+
 # import xlwings as xw
 # from pythoncom import CoInitialize
 
@@ -202,15 +204,14 @@ class RequestDataFrame:
 #         ws.range(terms[1]).clear_contents()
 
 
-def confirmation_pop_up(root):
-
+def confirmation_pop_up(root, text):
     pop = Toplevel(root)
     pop.iconbitmap('my_icon.ico')
     pop.attributes('-topmost', 'true')
-    pop.geometry("250x50")
-    pop.title("Confirmação de emissão")
+    pop.geometry("")
+    pop.title("Confirmação")
     thread_pop = Start(pop)
-    ttk.Label(pop, text="Emissões realizadas com sucesso!").pack()
+    ttk.Label(pop, text=text).pack(padx=20, pady=10)
     ttk.Button(
         pop,
         text="OK",
@@ -219,31 +220,42 @@ def confirmation_pop_up(root):
 
 
 def post_file():
-
     r = RequestDataFrame()
 
-    protocol = 59565
-    cte_file = '09432.pdf'
+    protocol = 95475
+    cte_file = 'Minuta.pdf'
+    cte = 123456789
+    data_emissao = '18/10/2023'
 
     cte_csv = pd.DataFrame({
         'Protocolo': [protocol],
         'Arquivo PDF': [cte_file],
     })
 
+    upload_cte_csv = pd.DataFrame({
+        'Protocolo': [protocol],
+        'CTE Loglife': [cte],
+        'Data Emissão CTE': [data_emissao]
+    })
+
     cte_csv.to_csv('AssociarPDF.csv', index=False, encoding='utf-8')
+    upload_cte_csv.to_csv('UploadCTE.csv', index=False,  encoding='utf-8')
 
-    printout = r.post_file("https://transportebiologico.com.br/api/pdf",
-                           cte_file,
-                           upload_type="CTE LOGLIFE",
-                           file_format="application/pdf",
-                           file_type="pdf_files")
+    cte_upload = r.post_file('https://transportebiologico.com.br/api/uploads/cte-loglife', 'UploadCTE.csv')
 
-    printout1 = r.post_file('https://transportebiologico.com.br/api/pdf/associate',
-                            'AssociarPDF.csv',
-                            upload_type="CTE LOGLIFE")
+    pdf_upload = r.post_file("https://transportebiologico.com.br/api/pdf",
+                             cte_file,
+                             upload_type="CTE LOGLIFE",
+                             file_format="application/pdf",
+                             file_type="pdf_files")
 
-    print(printout.text, printout)
-    print(printout1.text, printout1)
+    associate_pdf = r.post_file('https://transportebiologico.com.br/api/pdf/associate',
+                                'AssociarPDF.csv',
+                                upload_type="CTE LOGLIFE")
+
+    print(pdf_upload.text, pdf_upload)
+    print(associate_pdf.text, associate_pdf)
+    print(cte_upload.text, cte_upload)
 
 
 if __name__ == "__main__":

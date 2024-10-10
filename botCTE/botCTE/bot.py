@@ -13,6 +13,7 @@ class Bot(DesktopBot):
     def not_found(label):
         print(f"Element not found: {label}")
 
+    # NOT IN USE!
     def open_bsoft(self, path=None, login=None, password=None):
 
         # Open Bsoft
@@ -71,7 +72,7 @@ class Bot(DesktopBot):
 
         windll.user32.EmptyClipboard()
 
-        if self.find( "Start emission", matching=0.97, waiting_time=100000):
+        if self.find( "Start emission", matching=0.97, waiting_time=10):
             self.wait(500)
             self.key_f1()
 
@@ -160,7 +161,7 @@ class Bot(DesktopBot):
             self.not_found("IncludeNat")
         self.click()
 
-        if self.find("NF-e", matching=0.97, waiting_time=1000):
+        if self.find( "NF-e", matching=0.97, waiting_time=1000):
             self.click()
             self.type_up()
             self.enter()
@@ -205,58 +206,59 @@ class Bot(DesktopBot):
             self.wait(500)
             self.key_f1()
 
-        if not self.find( "emissionComp", matching=0.97, waiting_time=10000):
+        if not self.find( "emissionComp", matching=0.97, waiting_time=60000):
             self.not_found("emissionComp")
         self.click_relative(100, 30)
 
         self.type_down()
         self.enter()
 
-        if not self.find( "Part3", matching=0.97, waiting_time=10000):
+        if not self.find( "Part3", matching=0.97, waiting_time=60000):
             self.not_found("Part3")
         self.click()
 
-        if not self.find( "includeCTe", matching=0.97, waiting_time=10000):
+        if not self.find( "includeCTe", matching=0.97, waiting_time=60000):
             self.not_found("includeCTe")
         self.click()        
 
-        if not self.find( "searchCTe", matching=0.97, waiting_time=10000):
+        if not self.find( "searchCTe", matching=0.97, waiting_time=60000):
             self.not_found("searchCTe")
         self.click_relative(-37, 24)
         
-        if not self.find( "clearDate", matching=0.97, waiting_time=10000):
+        if not self.find( "clearDate", matching=0.97, waiting_time=60000):
             self.not_found("clearDate")
         self.click_relative(175, 43)
         self.type_up()
         self.enter()
 
-        if not self.find( "inputCTE", matching=0.97, waiting_time=10000):
+        if not self.find( "inputCTE", matching=0.97, waiting_time=60000):
             self.not_found("inputCTE")
         self.click_relative(66, 35)
 
         self.type_key(cte)
 
-        if not self.find( "findCTe", matching=0.97, waiting_time=10000):
+        if not self.find( "findCTe", matching=0.97, waiting_time=60000):
             self.not_found("findCTe")
         self.click()
 
-        if not self.find( "confirmCTE", matching=0.97, waiting_time=10000):
+        if not self.find( "selectAll", matching=0.97, waiting_time=60000):
+            self.not_found("findCTe")
+        self.click()
+
+        time.sleep(0.3)
+
+        if not self.find( "confirmCTE", matching=0.97, waiting_time=60000):
             self.not_found("confirmCTE")
         self.click()
 
-        # self.action()
-        # Uncomment to mark this task as finished on BotMaestro
-        # self.maestro.finish_task(
-        #     task_id=execution.task_id,
-        #     status=AutomationTaskFinishStatus.SUCCESS,
-        #     message="Task Finished OK."
-        # )
+        time.sleep(0.3)
 
     def part4(self,
               icms_text=None,
               price=None,
               uf=None,
               tax=None,
+              tp_info=None,
               complimentary=False):
 
         if not self.find( "part4", matching=0.97, waiting_time=30000):
@@ -272,7 +274,7 @@ class Bot(DesktopBot):
 
         if not self.find( "CST", matching=0.97, waiting_time=10000):
             self.not_found("CST")
-        self.click()
+        self.click_relative(9, 8)
 
         self.tab()
 
@@ -293,30 +295,58 @@ class Bot(DesktopBot):
 
         self.type_key(tax)
         self.tab()
-        self.tab()
+        if complimentary:
+            self.tab()
+        self.enter()
 
-        if not self.find( "Obs", matching=0.97, waiting_time=60000):
+        if self.find("Obs2", matching=0.99, waiting_time=250):
+            self.click()
+        if not self.find( "Obs", matching=0.97, waiting_time=250):
             self.not_found("Obs")
         self.click()
         self.wait(600)
-        self.paste(icms_text)
+        self.type_key(icms_text)
 
+        uf_list = ["AL", "AP", "GO", "MS", "MT", "PA", "PE", "PI", "PR", "RO", "RR", "RS", "SC", "TO"]
+
+        if uf in uf_list:
+        
+            if not self.find( "tp_obs", matching=0.97, waiting_time=10000):
+                self.not_found("tp_obs")
+            self.click()
+
+            if not self.find( "taxpayer_info", matching=0.97, waiting_time=10000):
+                self.not_found("taxpayer_info")
+            self.right_click_relative(28, 38)
+
+            if not self.find( "include_tp_info", matching=0.97, waiting_time=10000):
+                self.not_found("include_tp_info")
+            self.click()
+
+            self.type_key("GNRE_ICMSST")
+            self.tab()
+            self.type_key(tp_info)
+            
+            if not self.find( "confirm_tp_info", matching=0.97, waiting_time=10000):
+                self.not_found("confirm_tp_info")
+            self.click()
+            
         self.key_f4()
 
         if uf != "MG":
             if not self.find( "zeroValue", matching=0.97, waiting_time=10000):
                 self.not_found("zeroValue")
-            self.click_relative(205, 66)
-
+            self.enter()
+            
         if complimentary:
             if self.find( "confirmValue", matching=0.97, waiting_time=10000):
                 self.enter()
             else:
                 self.not_found("confirmValue")
 
-        if not self.find( 'confirmEmission', matching=0.97, waiting_time=60000):
+        if not self.find( "confirmEmission", matching=0.97, waiting_time=60000):
             self.not_found("confirmEmission")
-        self.double_click_relative(28, -33)
+        self.double_click_relative(0, 26)
         self.control_c()
         self.tab()
         self.tab()
@@ -343,8 +373,17 @@ class Bot(DesktopBot):
         self.type_left()
         self.enter()
 
-        if self.find( "fifthPopUp", matching=0.97, waiting_time=60000):
-            self.key_f10()
+        # if not self.find( "Validation", matching=0.97, waiting_time=5000):
+        #     pass
+        # else:
+        #     self.enter()
+
+        if self.find( "contingencia", matching=0.97, waiting_time=5000):
+            self.enter()
+
+        if not self.find( "fifthPopUp", matching=0.97, waiting_time=60000):
+            self.not_found("fifthPopUp")
+        self.key_f10()
         self.wait(2000)
 
         # self.action()
@@ -358,3 +397,5 @@ class Bot(DesktopBot):
 
 if __name__ == '__main__':
     Bot.main()
+
+
